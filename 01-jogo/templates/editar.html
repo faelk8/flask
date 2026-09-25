@@ -1,9 +1,9 @@
 {% extends "template.html" %}
 {% block conteudo %}
-      <form class="formularioJogo" action="{{ url_for('atualizar') }}" method="post" enctype="multipart/form-data">
+      <form class="formularioJogo" action="{{ url_for('web.atualizar') }}" method="post" enctype="multipart/form-data">
 
         <figure class="img thumbnail col-md-4 formularioImagem">
-          <img class="img-fluid" src="{{ url_for('imagem', nome_arquivo=capa_jogo) }}">
+          <img class="img-fluid" src="{{ url_for('api.game_cover', game_id=id) }}">
           <figcaption>
             <label class="fileContainer">
               Mudar Capa
@@ -29,7 +29,7 @@
           </div>
           <div class="form-group buttons">
             {{ form.salvar(class="btn btn-primary") }}
-            <a class="btn btn-danger" href="{{ url_for('index') }}">Voltar</a>
+            <a class="btn btn-danger" href="{{ url_for('web.index') }}">Voltar</a>
           </div>
         </fieldset>
       </form>

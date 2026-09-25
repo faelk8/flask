@@ -1,15 +1,20 @@
-$('form input[type="file"]').change(event => {
-  let arquivos = event.target.files;
-  if (arquivos.length === 0) {
-    console.log('sem imagem pra mostrar')
-  } else {
-      if(arquivos[0].type == 'image/jpeg') {
-        $('img').remove();
-        let imagem = $('<img class="img-fluid">');
-        imagem.attr('src', window.URL.createObjectURL(arquivos[0]));
-        $('figure').prepend(imagem);
-      } else {
-        alert('Formato não suportado')
-      }
-  }
+'use strict';
+
+document.querySelectorAll('input[type="file"]').forEach((input) => {
+  let previewUrl;
+  input.addEventListener('change', () => {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.type !== 'image/jpeg') {
+      input.value = '';
+      window.alert('Selecione uma imagem JPEG.');
+      return;
+    }
+    const image = input.closest('figure')?.querySelector('img');
+    if (image) {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(file);
+      image.src = previewUrl;
+    }
+  });
 });

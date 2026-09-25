@@ -1,0 +1,6 @@
+{% extends "template.html" %}
+{% block conteudo %}
+<p role="alert">{{ message }}</p>
+<p>Identificador: {{ g.get('request_id', '') }}</p>
+<a href="{{ url_for('web.index') }}">Voltar</a>
+{% endblock %}
