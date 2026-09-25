@@ -1,0 +1,11 @@
+.git
+.venv
+.env
+.env.*
+**/__pycache__
+**/instance
+**/*.db
+**/uploads/capa[0-9]*
+backups
+secrets
+.pytest_cache

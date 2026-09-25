@@ -1,35 +1,20 @@
-<a id="topo"></a>
-<h1 align="center">
-  <img src="image/flask.jpg" alt="Flask" width=720px height=420px >
-  <br>
-  Aplicação web Python e Flask
-</h1>
+# APIs
 
-<div align="center">
+Repositório para APIs Flask independentes. Cada aplicação e seus artefatos ficam em uma pasta própria, começando por [`01-jogo`](01-jogo/). O Python dos projetos é executado pelo ambiente Conda selecionado no VS Code; não é necessário criar venv.
 
-<!-- [![Status](https://img.shields.io/badge/version-1.0-blue)]() -->
-[![Status](https://img.shields.io/badge/status-active-success.svg)]()
-![Static Badge](https://img.shields.io/badge/Flask-orange)
+## Projetos
 
-</div>
+| Projeto | Descrição | Documentação |
+|---|---|---|
+| [`01-jogo`](01-jogo/) | Catálogo de jogos em Flask, com interface web e API JSON. | [Guia do projeto](01-jogo/README.md) |
 
-Aplicação WEB Flask que mosta uma lista de jogos, cadastrar novos jogos e login.
+## Documentação
 
-* prepara_banco.py:<br>
-  Cria o banco de dados, tabela e inserir os registros de usuários e jogos.
+A documentação do repositório é construída com Sphinx. O portal central agrega os guias e ADRs mantidos dentro de cada projeto.
 
-* config.py:<br>
-  Configurações para conectar no banco.
+```bash
+python -m pip install -r docs/requirements.txt
+python -m sphinx -b html -c docs . _build/docs
+```
 
-* models.py<br>
-  Classes da aplicação.
-
-* views_game.py<br>
-  Rota da página.
-
-* view_user.py<br>
-  Rota de autenticação e logout
-
-* jogoteca.py<br>
-  Aplicação principal.
-
+Abra `_build/docs/index.html` após a compilação. Veja [as convenções de contribuição](docs/contributing.rst) para adicionar projetos, páginas e decisões arquiteturais.

@@ -1,0 +1,17 @@
+.venv/
+.vscode/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+instance/
+*.db
+**/uploads/capa[0-9]*
+secrets/
+backups/
+*.pem
+*.key
+production.env
+.ruff_cache/
+_build/
+**/tests/load/results/

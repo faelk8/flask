@@ -1,0 +1,138 @@
+name: jogoteca
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+x-app: &app
+  image: ${APP_IMAGE:-jogoteca:local}
+  build: .
+  environment: &app-env
+    APP_ENV: production
+    SECRET_KEY: ${SECRET_KEY:?Generate SECRET_KEY}
+    MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?Generate MFA_ENCRYPTION_KEY}
+    METRICS_TOKEN: ${METRICS_TOKEN:?Generate METRICS_TOKEN}
+    DATABASE_URL: mysql+mysqlconnector://jogoteca:${MYSQL_PASSWORD:?Generate MYSQL_PASSWORD}@db/jogoteca
+    RATELIMIT_STORAGE_URI: redis://redis:6379/0
+    TRUSTED_HOSTS: ${DOMAIN:?Set DOMAIN},app,localhost,127.0.0.1
+    PROXY_HOPS: '1'
+    WEB_WORKERS: ${WEB_WORKERS:-2}
+    WEB_THREADS: ${WEB_THREADS:-2}
+    DB_POOL_SIZE: '5'
+    DB_MAX_OVERFLOW: '0'
+    COVER_TOTAL_QUOTA: ${COVER_TOTAL_QUOTA:-104857600}
+    COVER_USER_QUOTA: ${COVER_USER_QUOTA:-10485760}
+  networks: [backend]
+  read_only: true
+  tmpfs:
+    - /tmp:uid=10001,gid=10001,mode=1770,size=128m
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 128
+  mem_limit: 512m
+  cpus: 1.0
+  logging: *logging
+
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: jogoteca
+      MYSQL_USER: jogoteca
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Generate MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Generate MYSQL_ROOT_PASSWORD}
+    command: [--max-connections=100, --max-allowed-packet=16M, --innodb-buffer-pool-size=256M, --innodb-lock-wait-timeout=5]
+    volumes: [db-data:/var/lib/mysql]
+    networks: [backend]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql -u jogoteca -e "SELECT 1" jogoteca >/dev/null 2>&1']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    mem_limit: 1g
+    cpus: 1.0
+    logging: *logging
+  redis:
+    image: redis:7-alpine
+    command: [redis-server, --maxmemory, 64mb, --maxmemory-policy, noeviction, --appendonly, 'yes', --appendfsync, everysec]
+    volumes: [redis-data:/data]
+    networks: [backend]
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    mem_limit: 128m
+    cpus: 0.5
+    logging: *logging
+  migrate:
+    <<: *app
+    command: [flask, --app, jogoteca, db, upgrade]
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    restart: 'no'
+  app:
+    <<: *app
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=5)"]
+      interval: 15s
+      timeout: 6s
+      retries: 3
+      start_period: 20s
+  proxy:
+    image: nginx:stable-alpine
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN}
+      NGINX_ENVSUBST_FILTER: DOMAIN
+    volumes:
+      - ./deploy/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./deploy/nginx/proxy-common.conf:/etc/nginx/proxy-common.conf:ro
+      - ${TLS_DIR:?Set TLS_DIR to directory containing certificate and key}:/etc/nginx/tls:ro
+    ports: ['${HTTP_BIND:-0.0.0.0:80}:80', '${HTTPS_BIND:-0.0.0.0:443}:443']
+    networks: [edge, backend]
+    depends_on:
+      app: {condition: service_healthy}
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.5
+    logging: *logging
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: [monitoring]
+    command: [--config.file=/etc/prometheus/prometheus.yml, --storage.tsdb.retention.time=15d, --storage.tsdb.retention.size=1GB]
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ${METRICS_TOKEN_FILE:?Set METRICS_TOKEN_FILE}:/etc/prometheus/metrics-token:ro
+      - prometheus-data:/prometheus
+    networks: [backend]
+    ports: ['127.0.0.1:9090:9090']
+    mem_limit: 256m
+    logging: *logging
+    restart: unless-stopped
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    profiles: [monitoring]
+    volumes:
+      - ./deploy/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    networks: [backend, edge]
+    ports: ['127.0.0.1:9093:9093']
+    mem_limit: 128m
+    logging: *logging
+    restart: unless-stopped
+volumes:
+  db-data:
+  redis-data:
+  prometheus-data:
+  alertmanager-data:
+networks:
+  edge:
+  backend:
+    internal: true

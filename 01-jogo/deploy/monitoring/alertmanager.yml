@@ -1,0 +1,9 @@
+# Local inbox only. Configure your own verified receiver before going live.
+route:
+  receiver: local-inbox
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+receivers:
+  - name: local-inbox

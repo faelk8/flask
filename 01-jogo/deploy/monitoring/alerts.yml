@@ -1,0 +1,23 @@
+groups:
+  - name: jogoteca
+    rules:
+      - alert: JogotecaUnavailable
+        expr: up{job="jogoteca"} == 0
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: 'Aplicação sem coleta de métricas há mais de um minuto'}
+      - alert: JogotecaServerErrors
+        expr: sum(rate(jogoteca_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(jogoteca_http_requests_total[5m])), 0.001) > 0.01
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: 'Mais de 1% de erros 5xx por cinco minutos'}
+      - alert: JogotecaSlow
+        expr: histogram_quantile(0.95, sum by (le) (rate(jogoteca_http_duration_seconds_bucket[5m]))) > 0.5
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: 'p95 acima de 500ms; investigar banco, CPU e carga'}
+      - alert: JogotecaRateLimited
+        expr: sum(rate(jogoteca_http_requests_total{status="429"}[5m])) > 1
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: 'Limites acionados frequentemente; verificar abuso ou configuração'}
